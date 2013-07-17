@@ -431,7 +431,7 @@ class CameraMapper(dafPersist.Mapper):
           foo.fits~2
         All of the backups will be placed in the output repo, however, and will
         not be removed if they are found elsewhere in the _parent chain.  This
-        means that the same file to be stored twice if the previous version was
+        means that the same file will be stored twice if the previous version was
         found in an input repo.
         """
         n = 0
@@ -445,6 +445,9 @@ class CameraMapper(dafPersist.Mapper):
             oldPaths.append((n, path))
             path = self._parentSearch("%s~%d" % (newPath, n))
         for n, oldPath in reversed(oldPaths):
+            newDir, newFile = os.path.split(newPath)
+            if not os.path.exists(newDir):
+                os.makedirs(newDir)
             shutil.copy(oldPath, "%s~%d" % (newPath, n))
 
     def keys(self):
@@ -492,12 +495,18 @@ class CameraMapper(dafPersist.Mapper):
     def getEupsProductName(cls):
         """Return the name of the EUPS product containing this CameraMapper."""
         modPath = os.path.realpath(sys.modules[cls.__module__].__file__)
+        bestPathLen = 0
+        bestName = None
         for prod in eups.Eups().findProducts(tags=["setup"]):
-            if modPath.startswith(os.path.realpath(prod.dir)):
-                return prod.name
-        raise NotImplementedError(
+            path = os.path.realpath(prod.dir)
+            if modPath.startswith(path) and len(path) > bestPathLen:
+                bestName = prod.name
+                bestPathLen = len(path)
+        if bestName is None:
+            raise NotImplementedError(
                 "%s did not provide an eups product name, and one could not be discovered." %
                 (str(cls),))
+        return bestName
 
     def map_camera(self, dataId, write=False):
         """Map a camera dataset."""
