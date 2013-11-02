@@ -216,20 +216,25 @@ class PgSqlRegistry(Registry):
 #            print "##########"
 #            print k, v, val
             
-        self.conn.execute(cmd)
-        c = self.conn.fetchall()
-        result = []
-        for row in c:
-            new_row=[]
-            for val in row:
-                new_val=''
-                if isinstance(val,unicode):
-                    new_val = str(val)
-                else:
-                    new_val = val
+        try:
+            self.conn.execute(cmd)
+            c = self.conn.fetchall()
+            result = []
+            for row in c:
+                new_row=[]
+                for val in row:
+                    new_val=''
+                    if isinstance(val,unicode):
+                        new_val = str(val)
+                    else:
+                        new_val = val
 
-                new_row.append(new_val)
-            result.append(new_row)
-#            print result
-        return result
+                    new_row.append(new_val)
+                result.append(new_row)
 
+            return result
+
+        except Exception, e:
+            print e.pgerror
+            self.db.rollback()
+            return []
