@@ -158,6 +158,8 @@ class Mapping(object):
             for k, v in dataId.iteritems():
                 if self.columns and not k in self.columns:
                     continue
+                if k in ("tract", "patch"):  # never try to query on coadd-related things
+                    continue
                 if k == self.obsTimeName:
                     continue
                 where.append((k, '?'))
