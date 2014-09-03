@@ -381,9 +381,21 @@ class CameraMapper(dafPersist.Mapper):
         of the path.
         """
 
+        def normalize(path):
+            """Normalize path names
+
+            Removes leading double-slash, which is significant in POSIX but
+            not in Linux and not in the below code either.
+            """
+            path = os.path.normpath(path)
+            if path.startswith("//"):
+                path = path[1:]
+            return path
+
         # Separate path into a root-equivalent prefix (in dir) and the rest
         # (left in path)
-        rootDir = self.root
+        rootDir = normalize(self.root)
+        path = normalize(path)
 
         # First remove trailing slashes (#2527)
         while len(rootDir) > 1 and rootDir[-1] == '/':
