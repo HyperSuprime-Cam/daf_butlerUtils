@@ -55,6 +55,8 @@ except ImportError:
 from lsst.pex.config import Config, Field
 import lsst.pex.exceptions as pexExcept
 
+registries = {} # Pool of registries, to avoid "too many open files" error
+
 class Registry(object):
     """The registry base class."""
 
@@ -62,7 +64,7 @@ class Registry(object):
         pass
 
     @staticmethod
-    def create(location):
+    def _createRegistry(location):
         """Create a registry object of an appropriate type.
         @param location (string) Path or URL for registry, or None if
                                  unavailable"""
@@ -83,6 +85,21 @@ class Registry(object):
             return PgSqlRegistry(location)
         raise RuntimeError, \
                 "Unable to create registry using location: " + location
+
+    @staticmethod
+    def create(location):
+        """Create a registry of the appropriate type
+
+        The registry is cached to avoid the "too many open files" error
+
+        @param location (string) Path or URL for registry, or None if
+                                 unavailable
+        """
+        if location in registries:
+            return registries[location]
+        registry = self._createRegistry(location)
+        registries[location] = registry
+        return registry
 
     # TODO - flesh out the generic interface as more registry types are
     # defined.
