@@ -52,6 +52,7 @@ except ImportError:
     except ImportError:
         havePgSql = False
 
+import threading
 from lsst.pex.config import Config, Field
 import lsst.pex.exceptions as pexExcept
 
@@ -59,6 +60,7 @@ class Registry(object):
     """The registry base class."""
 
     registries = {} # Pool of registries, to avoid "too many open files" error
+    threadId = None # Thread identifier, since connections are only valid for a single thread.
 
     def __init__(self):
         pass
@@ -90,11 +92,22 @@ class Registry(object):
     def create(cls, location):
         """Create a registry of the appropriate type
 
-        The registry is cached to avoid the "too many open files" error
+        The registry is cached to avoid the "too many open files" error.
+
+        The registry is only cached for the current thread.  We are not
+        attempting to be thread-safe (this is inherently NOT thread-safe),
+        but to support multiprocessing, as SQLite (and possibly others)
+        will not use a connection created in a different thread.
 
         @param location (string) Path or URL for registry, or None if
                                  unavailable
         """
+        currentThreadId = threading.currentThread().ident
+        if currentThreadId != cls.threadId:
+            # Blow away all registries: we're now in a different thread
+            cls.registries = {}
+            cls.threadId = currentThreadId
+
         if location in cls.registries:
             return cls.registries[location]
         registry = cls._createRegistry(location)
